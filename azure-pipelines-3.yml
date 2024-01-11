@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Task List</title>
+</head>
+<body>
+    <h1>Tasks</h1>
+    <ul id="task-list"></ul>
+    <form id="task-form">
+        <input type="text" id="task-title" placeholder="Enter task title">
+        <button type="submit">Add Task</button>
+    </form>
+
+    <script>
+        const taskList = document.getElementById('task-list');
+        const taskForm = document.getElementById('task-form');
+
+        fetch('/tasks')
+            .then(response => response.json())
+            .then(tasks => {
+                tasks.forEach(task => {
+                    const taskItem = document.createElement('li');
+                    taskItem.textContent = task.title;
+                    taskList.appendChild(taskItem);
+                });
+            });
+
+        taskForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const title = document.getElementById('task-title').value;
+            fetch('/tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title })
+            })
+            .then(response => response.json())
+            .then(task => {
+                const taskItem = document.createElement('li');
+                taskItem.textContent = task.title;
+                taskList.appendChild(taskItem);
+                taskForm.reset();
+            });
+        });
+    </script>
+</body>
+</html>
+
+trigger:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+strategy:
+  matrix:
+    Python27:
+      python.version: '2.7'
+    Python35:
+      python.version: '3.5'
+    Python36:
+      python.version: '3.6'
+    Python37:
+      python.version: '3.7'
+
+steps:
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '$(python.version)'
+  displayName: 'Use Python $(python.version)'
+
+- script: |
+    python -m pip install --upgrade pip
+    pip install -r requirements.txt
+  displayName: 'Install dependencies'
+
+- script: |
+    pip install pytest pytest-azurepipelines
+    pytest
+  displayName: 'pytest'
